@@ -11,11 +11,12 @@ const redis = new Redis({
   port: 6379,
 });
 
-// rate limit
-app.get("/", async (req, res) => {
+// rate limit middleware
+const rateLimiter = async (req, res, next) => {
   const clientIp = req.headers["x-forwarded-for"] || req.socket.remoteAddress;
+  const key = clientIp + ":req_count:" + req.path;
 
-  const key = clientIp + ":req_count";
+  console.log(key);
 
   const limit = 10;
 
@@ -38,11 +39,16 @@ app.get("/", async (req, res) => {
         "s"
     );
   }
-  res.send("Hello World! Your request count " + reqCount);
+
+  next();
+};
+
+app.get("/", rateLimiter, async (req, res) => {
+  res.send("Hello World!");
 });
 
 // cache controlling
-app.get("/products", async (req, res) => {
+app.get("/products", rateLimiter, async (req, res) => {
   try {
     // Check and send from Redis
     const exists = await redis.exists("products");
@@ -68,7 +74,7 @@ app.get("/products", async (req, res) => {
 });
 
 // cache controlling
-app.get("/products/:id", async (req, res) => {
+app.get("/products/:id", rateLimiter, async (req, res) => {
   try {
     const id = Number(req.params.id);
     const key = "products:" + id;
