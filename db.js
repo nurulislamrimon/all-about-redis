@@ -30,3 +30,14 @@ export const getProducts = async () => {
 
   return prodPromise;
 };
+
+export const getProductById = async (id) => {
+  const product = products.filter((product) => product.id === id);
+  const prodPromise = new Promise((res, rej) => {
+    setTimeout(() => {
+      res(Array.isArray(product) ? product?.[0] : product);
+    }, 1000);
+  });
+
+  return prodPromise;
+};
