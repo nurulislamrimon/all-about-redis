@@ -11,8 +11,34 @@ const redis = new Redis({
   port: 6379,
 });
 
-app.get("/", (req, res) => {
-  res.send("Hello World!");
+// rate limit
+app.get("/", async (req, res) => {
+  const clientIp = req.headers["x-forwarded-for"] || req.socket.remoteAddress;
+
+  const key = clientIp + ":req_count";
+
+  const limit = 10;
+
+  const timer = 30;
+
+  const reqCount = await redis.incr(key);
+
+  const timeRemaining = await redis.ttl(key);
+
+  if (reqCount === 1) {
+    await redis.expire(key, timer);
+  }
+
+  if (reqCount > limit) {
+    return res.send(
+      "You exceed request per " +
+        timer +
+        "s. Your remaining time " +
+        timeRemaining +
+        "s"
+    );
+  }
+  res.send("Hello World! Your request count " + reqCount);
 });
 
 // cache controlling
